@@ -3595,6 +3595,16 @@ void Interpreter::Gfxs2dexRecyCopy(F3DuObjSprite* spr) {
                           (float)(1 << 10) * realSW, (float)(1 << 10) * realSH, false);
 }
 
+// AArch64 ignores the top byte of an address (Top Byte Ignore), and Android puts a tag there in every heap
+// pointer, so range checks on a pointer have to leave that byte out.
+static uintptr_t StripPointerTag(uintptr_t addr) {
+#if defined(__aarch64__)
+    return addr & 0x00FFFFFFFFFFFFFFull;
+#else
+    return addr;
+#endif
+}
+
 void* Interpreter::SegAddr(uintptr_t w1) {
     // Segmented?
     if (w1 & 1) {
@@ -5277,7 +5287,7 @@ static void gfx_step() {
         // Guard against null or N64-segment addresses that would crash in strlen/strncmp.
         if (opcode == OTR_G_VTX_OTR_FILEPATH || opcode == OTR_G_SETTIMG_OTR_FILEPATH ||
             opcode == OTR_G_DL_OTR_FILEPATH || opcode == OTR_G_PUSHCD || opcode == OTR_G_MTX_OTR_FILEPATH) {
-            uintptr_t w1 = (uintptr_t)cmd->words.w1;
+            uintptr_t w1 = StripPointerTag((uintptr_t)cmd->words.w1);
             if (w1 < 0x10000
 #if UINTPTR_MAX > 0xFFFFFFFFu
                 // On 64-bit: filter kernel/sentinel addresses.
@@ -5713,7 +5723,7 @@ void gfx_push_current_dir(char* path) {
 }
 
 int32_t gfx_check_image_signature(const char* imgData) {
-    uintptr_t i = (uintptr_t)(imgData);
+    uintptr_t i = StripPointerTag((uintptr_t)(imgData));
 
     if ((i & 1) == 1) {
         return 0;
