@@ -300,7 +300,9 @@ std::string GfxRenderingAPIOGL::BuildFsShader(const CCFeatures& cc_features) {
         { "texture", "texture" },
         { "vOutColor", "vOutColor" },
 #elif defined(USE_OPENGLES)
-        { "GLSL_VERSION", "#version 300 es\nprecision mediump float;" },
+        // highp: the texture coordinate math (three-point filtering, LOD selection) breaks down in the 16-bit floats
+        // that mediump means on GPUs such as Mali
+        { "GLSL_VERSION", "#version 300 es\nprecision highp float;" },
         { "attr", "in" },
         { "opengles", true },
         { "core_opengl", false },
